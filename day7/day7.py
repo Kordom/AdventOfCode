@@ -1,5 +1,7 @@
 import requests
 from cookies import cookie
+import re
+from itertools import product
 
 url = "https://adventofcode.com/2024/day/7/input"
 cookies = {
@@ -9,47 +11,45 @@ cookies = {
 r = requests.get(url, cookies=cookies)
 
 OPERATORS = ['+', '*']
+calibration_result = 0
 
 
-def split_and_make_dict(contents):
-    list_of_dict = []
+def split_and_make_list(contents):
+    list_of_list = []
     for item in contents:
-        key, value = item.split(": ")
-        result_dict = {key: value}
-        list_of_dict.append(result_dict)
-
-    return list_of_dict
+        list_of_list.append(re.findall(r"\d+", item))
+    return list_of_list
 
 
-def get_values_out_of_dict(dictionary):
-    key = ''
-    val = ''
-    for k, v in dictionary.items():
-        key = k
-        val = v
-    return key, val
+def evaluate_left_to_right(numbers, ops):
+    result = int(numbers[0])
+    for i, op in enumerate(ops):
+        if op == '+':
+            result += int(numbers[i + 1])
+        elif op == '*':
+            result *= int(numbers[i + 1])
+    return result
+
+
+def find_valid_equation(numbers, target):
+    operator_combinations = product(OPERATORS, repeat=len(numbers) - 1)
+    for ops in operator_combinations:
+        result = evaluate_left_to_right(numbers, ops)
+        if result == target:
+            print(
+                f"Valid configuration found: {numbers[0]} {' '.join(f'{ops[i]} {numbers[i + 1]}' for i in range(len(ops)))}")
+            return True
+    return False
 
 
 if r.status_code == 200:
     content = r.text.splitlines()
-    equations = split_and_make_dict(content)
+    equations = split_and_make_list(content)
 
-    while True:
-        for elem in equations:
-            values = get_values_out_of_dict(elem)
-            evaluation = ''
+    for elem in equations:
+        total_value = int(elem[0])
+        numbers = elem[1:]
 
-            for i in values[1]:
-                if i != " ":
-                    evaluation += i
-                if i == " ":
-                    evaluation += OPERATORS[0]
-
-
-            # evaluation = eval(values[1].replace(" ", OPERATORS[0]))
-            # evaluation2 = eval(values[1].replace(" ", OPERATORS[1]))
-            # if int(values[0]) == evaluation:
-            #     break
-            # if int(values[0]) == evaluation2:
-            #     break
-
+        if find_valid_equation(numbers, total_value):
+            calibration_result += total_value
+            print(calibration_result)
